@@ -1,0 +1,1815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SakayTayo — Manolo Fortich Habal-Habal Fare Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,300&family=Syne:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+   :root {
+    --bg: #f4f7fb;
+    --surface: #ffffff;
+    --surface2: #eef3f9;
+    --border: #d6e4f0;
+    --text: #0f1f2e;
+    --text2: #4a6080;
+    --text3: #8ba3be;
+    --accent: #051841;
+    --accent2: #3be0f6;
+    --accent-dim: rgba(37,99,235,0.1);
+    --green: #16a34a;
+    --green-dim: rgba(22,163,74,0.1);
+    --gold: #b45309;
+    --gold-dim: rgba(180,83,9,0.1);
+    --red: #dc2626;
+    --red-dim: rgba(220,38,38,0.1);
+    --shadow: 0 2px 12px rgba(37,99,235,0.07);
+    --shadow-lg: 0 8px 32px rgba(37,99,235,0.12);
+    --radius: 16px;
+    --radius-sm: 10px;
+    --nav-w: 280px;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  html, body {
+    height:100%;
+    font-family:'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  /* ── LAYOUT ── */
+  .app { display:flex; height: 100dvh; position:relative; overflow:hidden; }
+
+  /* ── SIDEBAR NAV ── */
+  .sidebar {
+    width: var(--nav-w);
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+    transition: transform 0.32s cubic-bezier(.4,0,.2,1), box-shadow 0.32s ease;
+    flex-shrink: 0;
+  }
+  .sidebar-header {
+    padding: 28px 24px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    font-family:'Syne', sans-serif;
+    font-size:22px; font-weight:800;
+    color: var(--accent);
+    letter-spacing:-0.5px;
+    line-height:1;
+  }
+  .logo span { color: var(--text); }
+  .logo-sub {
+    font-size:10.5px; font-weight:500;
+    color: var(--text3);
+    margin-top:4px;
+    text-transform:uppercase; letter-spacing:1.2px;
+  }
+  .nav-links { flex:1; padding:16px 12px; display:flex; flex-direction:column; gap:4px; }
+  .nav-link {
+    display:flex; align-items:center; gap:12px;
+    padding:12px 14px;
+    border-radius: var(--radius-sm);
+    cursor:pointer;
+    transition: all 0.2s;
+    font-size:14px; font-weight:500;
+    color: var(--text2);
+    border: none; background:none; text-align:left; width:100%;
+    position:relative;
+  }
+  .nav-link:hover { background: var(--surface2); color: var(--text); }
+  .nav-link.active { background: var(--accent-dim); color: var(--accent); font-weight:600; }
+  .nav-link .nav-icon { font-size:18px; flex-shrink:0; }
+  .nav-badge {
+    margin-left:auto;
+    background: var(--accent);
+    color:#fff;
+    font-size:10px; font-weight:700;
+    padding: 2px 7px;
+    border-radius:99px;
+    min-width:20px; text-align:center;
+  }
+  .nav-footer {
+    padding:16px 20px;
+    border-top:1px solid var(--border);
+    font-size:11px; color: var(--text3);
+    line-height:1.5;
+  }
+
+  /* ── MOBILE TOGGLE ── */
+  button:active {
+  transform: scale(0.97);
+}
+
+.pin-row:active {
+  transform: scale(0.98);
+}
+  .menu-toggle {
+    display:none;
+    position:fixed; top:14px; left:14px;
+    z-index:999;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius:10px;
+    padding:8px 10px;
+    cursor:pointer;
+    box-shadow: var(--shadow);
+    font-size:18px;
+  }
+  .overlay {
+    display:none;
+    position:fixed; inset:0;
+    background:rgba(0,0,0,0.3);
+    z-index:99;
+    backdrop-filter:blur(2px);
+  }
+  .overlay {
+  display: none;
+  pointer-events: none;
+}
+
+.overlay.active {
+  display: block;
+  pointer-events: auto;
+}
+
+  /* ── MAIN CONTENT ── */
+  .main {
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+    position:relative;
+    height:100%;
+  }
+
+  /* ── PANELS ── */
+  .panel {
+    display:none;
+    flex:1;
+    overflow:hidden;
+    animation: fadeUp 0.3s ease;
+    height:100%;
+  }
+  .panel.active { display:flex; flex-direction:column; }
+
+  @keyframes fadeUp {
+    from { opacity:0; transform:translateY(12px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+
+  /* ── PANEL HEADER ── */
+  .panel-header {
+    padding: 20px 24px 16px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink:0;
+  }
+  .panel-title {
+    font-family:'Syne', sans-serif;
+    font-size:20px; font-weight:700;
+    color: var(--text);
+    letter-spacing:-0.3px;
+  }
+  .panel-sub {
+    font-size:12.5px; color: var(--text3); margin-top:3px;
+  }
+
+  /* ── MAP PANEL ── */
+  #panel-map {
+    flex-direction: row;
+    height: 100%;
+    overflow: hidden;
+    position: relative;
+  }
+  .map-wrapper {
+    flex:1;
+    position:relative;
+    overflow:hidden;
+  }
+  #map {
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    background:#e8e4dc;
+  }
+  #map {
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+
+.map-container, .main, .panel {
+  pointer-events: auto;
+}
+
+  /* ── MAP CONTROLS ── */
+  button, .btn, .pin-row {
+  cursor: pointer;
+  pointer-events: auto;
+}
+  * {
+  touch-action: manipulation;
+}
+  .map-sidebar {
+  pointer-events: auto;
+}
+
+#map {
+  touch-action: pan-x pan-y;
+}
+  .map-sidebar {
+    width:300px;
+    background: var(--surface);
+    border-left:1px solid var(--border);
+    display:flex; flex-direction:column;
+    overflow:hidden;
+    flex-shrink:0;
+  }
+  .map-ctrl-head {
+    padding:18px 20px 12px;
+    border-bottom:1px solid var(--border);
+    flex-shrink:0;
+  }
+  .map-ctrl-title {
+    font-family:'Syne', sans-serif;
+    font-size:16px; font-weight:700;
+  }
+  .map-ctrl-sub { font-size:11.5px; color:var(--text3); margin-top:2px; }
+
+  .map-ctrl-body { padding:16px 18px; flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:14px; }
+
+  .pin-row {
+    display:flex; align-items:center; gap:10px;
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    padding:12px 14px;
+    border: 1.5px solid transparent;
+    transition: border-color 0.2s;
+    cursor:pointer;
+    padding: 16px 16px; /* bigger touch area */
+  }
+  .pin-row:hover { border-color: var(--border); }
+  .pin-row.active-pin { border-color: var(--accent); background: var(--accent-dim); }
+  .pin-dot {
+    width:28px; height:28px;
+    border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px; flex-shrink:0;
+  }
+  .pin-dot.pickup { background:#d4f0df; }
+  .pin-dot.dropoff { background:#fde8de; }
+  .pin-info { flex:1; min-width:0; }
+  .pin-label { font-size:11px; font-weight:600; color:var(--text3); text-transform:uppercase; letter-spacing:0.8px; }
+  .pin-addr { font-size:13px; font-weight:500; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .pin-clear {
+    background:none; border:none; cursor:pointer;
+    color:var(--text3); font-size:16px; padding:2px;
+    border-radius:6px; transition:all 0.15s;
+  }
+  .pin-clear:hover { color:var(--red); background:var(--red-dim); }
+
+.map-instruction {
+  background: var(--accent-dim);
+  border-radius: var(--radius-sm);
+  padding:10px 14px;
+  font-size:12.5px;
+  color:var(--accent);
+  font-weight:500;
+  text-align:center;
+  border:1px dashed var(--accent2);
+  
+}
+
+  /* ── FARE RESULT ── */
+  .fare-result {
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    border:1px solid var(--border);
+    overflow:hidden;
+  }
+  .fare-result-head {
+    padding:12px 16px;
+    background:var(--accent);
+    color:#fff;
+    font-family:'Syne', sans-serif;
+    font-size:13px; font-weight:700;
+    letter-spacing:0.3px;
+  }
+  .fare-result-body { padding:14px 16px; display:flex; flex-direction:column; gap:10px; }
+  .fare-row {
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .fare-row-label { font-size:12.5px; color:var(--text2); font-weight:500; }
+  .fare-row-value { font-size:14px; font-weight:700; }
+  .fare-row-value.regular { color:var(--text); }
+  .fare-row-value.discount { color:var(--green); }
+  .fare-row-value.distance { color:var(--accent); }
+  .fare-divider { height:1px; background:var(--border); }
+
+  .btn {
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    padding:12px 18px;
+    border-radius: var(--radius-sm);
+    font-family:'DM Sans', sans-serif;
+    font-size:13.5px; font-weight:600;
+    cursor:pointer; border:none;
+    transition:all 0.2s;
+    text-decoration:none;
+  }
+  .btn-primary {
+    background:var(--accent); color:#fff;
+  }
+  .btn-primary:hover { background:var(--accent2); transform:translateY(-1px); box-shadow:0 4px 16px rgba(224,92,42,0.3); }
+  .btn-primary:active { transform:translateY(0); }
+  .btn-secondary {
+    background:var(--surface2); color:var(--text);
+    border:1px solid var(--border);
+  }
+  .btn-secondary:hover { background:var(--border); }
+  .btn-danger { background:var(--red-dim); color:var(--red); border:1px solid rgba(192,57,43,0.2); }
+  .btn-danger:hover { background:var(--red); color:#fff; }
+  .btn-sm { padding:8px 14px; font-size:12.5px; }
+
+  /* ── FARE MATRIX PANEL ── */
+  #panel-matrix { overflow-y:auto; }
+  .matrix-content { padding:24px; max-width:700px; margin:0 auto; }
+  .matrix-table {
+    width:100%;
+    border-collapse:collapse;
+    background:var(--surface);
+    border-radius: var(--radius);
+    overflow:hidden;
+    box-shadow: var(--shadow);
+  }
+  .matrix-table th {
+    background:var(--accent);
+    color:#fff;
+    padding:14px 20px;
+    text-align:left;
+    font-size:13px; font-weight:600;
+    font-family:'Syne', sans-serif;
+    letter-spacing:0.3px;
+  }
+  .matrix-table td {
+    padding:14px 20px;
+    border-bottom:1px solid var(--border);
+    font-size:14px;
+    transition:background 0.15s;
+  }
+  .matrix-table tr:last-child td { border-bottom:none; }
+  .matrix-table tr:hover td { background:var(--surface2); }
+  .matrix-table td:first-child { font-weight:600; }
+  .fare-pill {
+    display:inline-block;
+    padding:4px 12px;
+    border-radius:99px;
+    font-size:13px; font-weight:600;
+  }
+  .fare-pill.reg { background:var(--accent-dim); color:var(--accent); }
+  .fare-pill.disc { background:var(--green-dim); color:var(--green); }
+  .matrix-note {
+    margin-top:18px;
+    background:var(--gold-dim);
+    border:1px solid var(--gold);
+    border-radius: var(--radius-sm);
+    padding:14px 18px;
+    font-size:13px; color:var(--text2); line-height:1.6;
+  }
+  .matrix-note strong { color:var(--gold); }
+
+  /* ── LOGS PANEL ── */
+  #panel-logs { overflow-y:auto; }
+  .logs-content { padding:24px; display:flex; flex-direction:column; gap:12px; }
+  .log-empty {
+    text-align:center; padding:60px 20px;
+    color:var(--text3); font-size:14px;
+  }
+  .log-empty .log-empty-icon { font-size:48px; margin-bottom:12px; }
+  .log-card {
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding:16px 18px;
+    display:flex; align-items:flex-start; gap:14px;
+    box-shadow: var(--shadow);
+    animation: fadeUp 0.25s ease;
+  }
+  .log-num {
+    width:32px; height:32px;
+    background:var(--accent-dim);
+    color:var(--accent);
+    border-radius:8px;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Syne', sans-serif; font-size:13px; font-weight:700;
+    flex-shrink:0;
+  }
+  .log-body { flex:1; }
+  .log-route { font-size:13.5px; font-weight:600; color:var(--text); line-height:1.4; }
+  .log-meta { display:flex; gap:12px; flex-wrap:wrap; margin-top:6px; }
+  .log-chip {
+    font-size:11.5px; font-weight:600;
+    padding:3px 10px;
+    border-radius:99px;
+  }
+  .log-chip.dist { background:var(--accent-dim); color:var(--accent); }
+  .log-chip.fare { background:var(--surface2); color:var(--text); border:1px solid var(--border); }
+  .log-chip.disc { background:var(--green-dim); color:var(--green); }
+  .log-chip.time { background:var(--gold-dim); color:var(--gold); }
+  .log-del {
+    background:none; border:none; cursor:pointer;
+    color:var(--text3); font-size:16px; padding:4px;
+    border-radius:6px; transition:all 0.15s; flex-shrink:0;
+  }
+  .log-del:hover { color:var(--red); background:var(--red-dim); }
+  .logs-toolbar {
+    display:flex; gap:10px; padding:0 24px 0; flex-shrink:0;
+    align-items:center; justify-content:space-between;
+  }
+  .logs-count { font-size:13px; color:var(--text3); }
+
+  /* ── REPORT PANEL ── */
+  #panel-report { overflow-y:auto; }
+  .report-content { padding:24px; max-width:600px; }
+  .form-group { display:flex; flex-direction:column; gap:6px; margin-bottom:16px; }
+  .form-label { font-size:12.5px; font-weight:600; color:var(--text2); text-transform:uppercase; letter-spacing:0.7px; }
+  .form-input, .form-select, .form-textarea {
+    padding:12px 14px;
+    background:var(--surface);
+    border:1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family:'DM Sans', sans-serif;
+    font-size:14px; color:var(--text);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline:none; width:100%;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    border-color:var(--accent);
+    box-shadow:0 0 0 3px var(--accent-dim);
+  }
+  .form-textarea { resize:vertical; min-height:90px; }
+  .form-select { cursor:pointer; }
+  .form-hint { font-size:11.5px; color:var(--text3); margin-top:2px; }
+
+  .report-preview {
+    background:var(--surface);
+    border:2px solid var(--border);
+    border-radius: var(--radius);
+    padding:28px;
+    margin-top:20px;
+    font-size:13px;
+    display:none;
+    box-shadow: var(--shadow-lg);
+  }
+  .report-preview.visible { display:block; animation:fadeUp 0.3s ease; }
+  .rp-header {
+    text-align:center; border-bottom:2px solid var(--border);
+    padding-bottom:16px; margin-bottom:16px;
+  }
+  .rp-badge {
+    display:inline-block;
+    background:var(--red-dim);
+    color:var(--red);
+    font-size:10px; font-weight:700;
+    padding:3px 12px; border-radius:99px;
+    letter-spacing:1px; text-transform:uppercase;
+    margin-bottom:8px; border:1px solid rgba(192,57,43,0.2);
+  }
+  .rp-title { font-family:'Syne', sans-serif; font-size:18px; font-weight:800; color:var(--text); }
+  .rp-sub { font-size:11.5px; color:var(--text3); margin-top:2px; }
+  .rp-field { display:flex; gap:10px; padding:8px 0; border-bottom:1px solid var(--surface2); }
+  .rp-field:last-child { border-bottom:none; }
+  .rp-key { width:140px; font-weight:600; color:var(--text2); font-size:12px; flex-shrink:0; }
+  .rp-val { color:var(--text); font-size:13px; }
+  .rp-footer { text-align:center; margin-top:16px; font-size:11px; color:var(--text3); border-top:1px solid var(--border); padding-top:12px; }
+  .rp-ref { font-family:'Syne', sans-serif; font-size:14px; font-weight:700; color:var(--accent); }
+
+  /* ── ABOUT PANEL ── */
+  #panel-about { overflow-y:auto; }
+  .about-content { padding:32px; max-width:640px; }
+  .about-hero {
+    background:var(--accent);
+    border-radius:var(--radius);
+    padding:32px;
+    color:#fff;
+    margin-bottom:28px;
+    position:relative; overflow:hidden;
+  }
+  .about-hero::before {
+    content:'';
+    position:absolute; top:-30px; right:-30px;
+    width:160px; height:160px;
+    border-radius:50%;
+    background:rgba(255,255,255,0.08);
+  }
+  .about-hero-tag {
+    font-size:11px; font-weight:700;
+    text-transform:uppercase; letter-spacing:1.5px;
+    opacity:0.75; margin-bottom:10px;
+  }
+  .about-hero-title { font-family:'Syne', sans-serif; font-size:28px; font-weight:800; line-height:1.2; }
+  .about-hero-sub { font-size:14px; opacity:0.8; margin-top:8px; line-height:1.6; }
+  .about-section { margin-bottom:28px; }
+  .about-section-title {
+    font-family:'Syne', sans-serif; font-size:15px; font-weight:700;
+    margin-bottom:12px; color:var(--accent);
+    display:flex; align-items:center; gap:8px;
+  }
+  .about-section p { font-size:14px; color:var(--text2); line-height:1.75; margin-bottom:10px; }
+  .about-card {
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius-sm);
+    padding:20px 22px;
+    display:flex; gap:16px; align-items:flex-start;
+    box-shadow:var(--shadow);
+  }
+  .about-avatar {
+    width:52px; height:52px;
+    background:var(--accent);
+    border-radius:12px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:22px; flex-shrink:0;
+  }
+  .about-name { font-family:'Syne', sans-serif; font-size:16px; font-weight:700; }
+  .about-role { font-size:12.5px; color:var(--text3); margin-top:3px; line-height:1.5; }
+  .fare-ref-box {
+    background:var(--gold-dim);
+    border:1px solid var(--gold);
+    border-radius:var(--radius-sm);
+    padding:14px 18px;
+    font-size:13px; color:var(--text2); line-height:1.6;
+  }
+  .fare-ref-box strong { color:var(--gold); }
+
+  /* ── TOAST ── */
+  .toast-wrap {
+    position:fixed; bottom:24px; right:24px;
+    z-index:9999;
+    display:flex; flex-direction:column; gap:8px;
+    pointer-events:none;
+  }
+  .toast {
+    padding:12px 18px;
+    border-radius:var(--radius-sm);
+    font-size:13.5px; font-weight:500;
+    color:#fff;
+    box-shadow:var(--shadow-lg);
+    animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards;
+    pointer-events:auto;
+  }
+  .toast.success { background:var(--green); }
+  .toast.error   { background:var(--red); }
+  .toast.info    { background:var(--accent); }
+  @keyframes toastIn { from { opacity:0; transform:translateX(20px); } to { opacity:1; transform:translateX(0); } }
+  @keyframes toastOut { to { opacity:0; transform:translateX(20px); } }
+
+  /* ── MOBILE FLOATING FARE CARD ── */
+  #mobile-fare-float {
+    display: none; /* hidden on desktop, shown via JS on mobile */
+  }
+
+  @media(max-width:768px) {
+    #mobile-fare-float {
+      display: none; /* JS controls visibility */
+      position: absolute;
+      bottom: 268px;
+      left: 12px; right: 12px;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 16px;
+      z-index: 30;
+      box-shadow: 0 4px 28px rgba(0,0,0,0.15);
+      flex-direction: row;
+      align-items: center;
+      gap: 10px;
+    }
+    #mobile-fare-float.visible {
+      display: flex;
+    }
+    .mff-rows {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .mff-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .mff-label {
+      font-size: 12px;
+      color: var(--text2);
+      font-weight: 500;
+    }
+    .mff-label small {
+      font-size: 10.5px;
+      color: var(--text3);
+      font-weight: 400;
+    }
+    .mff-val {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .mff-val.accent { color: var(--accent); }
+    .mff-val.green  { color: var(--green);  }
+    .mff-divider {
+      height: 1px;
+      background: var(--border);
+      margin: 2px 0;
+    }
+    .mff-close {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+      color: var(--text3);
+      cursor: pointer;
+      flex-shrink: 0;
+      align-self: flex-start;
+    }
+  }
+
+  /* ── MOBILE ── */
+@media(max-width:768px) {
+
+  /* Show hamburger */
+  .menu-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 400;
+  }
+
+  /* Sidebar: fixed off-screen drawer */
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0; bottom: 0;
+    width: min(var(--nav-w), 82vw);
+    transform: translateX(-100%);
+    z-index: 350;
+    box-shadow: 4px 0 32px rgba(0,0,0,0.18);
+  }
+  .sidebar.active {
+    transform: translateX(0);
+  }
+
+  /* Overlay: full-screen behind drawer */
+  .overlay {
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 300 !important;
+    background: rgba(0,0,0,0.38) !important;
+    backdrop-filter: blur(3px);
+    display: none !important;
+    pointer-events: none;
+  }
+  .overlay.active {
+    display: block !important;
+    pointer-events: auto;
+  }
+
+  /* Main fills full width */
+  .main { width: 100%; }
+
+  /* Panel headers: pad left for hamburger */
+  .panel-header {
+    padding-left: 60px;
+    padding-top: 14px;
+    padding-bottom: 14px;
+  }
+
+  /* ── MAP PANEL: vertical stack ── */
+  #panel-map {
+    flex-direction: column;
+    position: relative;
+  }
+
+  .map-wrapper {
+    flex: 1;
+    position: relative;
+    min-height: 0;
+  }
+
+  /* Bottom sheet */
+  .map-sidebar {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    width: 100%;
+    height: 260px;
+    min-height: 160px;
+    max-height: 82vh;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    border-radius: 18px 18px 0 0;
+    box-shadow: 0 -6px 28px rgba(0,0,0,0.13);
+    transition: height 0.25s cubic-bezier(.4,0,.2,1);
+    z-index: 20;
+  }
+
+  /* Drag handle pill */
+  .map-ctrl-head::before {
+    content: '';
+    display: block;
+    width: 40px; height: 4px;
+    background: var(--border);
+    border-radius: 99px;
+    margin: 0 auto 10px;
+  }
+
+  .map-ctrl-head {
+    padding-top: 14px;
+  }
+
+  .map-ctrl-body {
+    padding: 10px 14px 14px;
+    gap: 10px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Fare result floats to top so it's immediately visible */
+  #fare-result  { order: -2; }
+  #fare-actions { order: -1; }
+
+  /* Mode buttons — bigger touch */
+  .map-mode-btn {
+    min-height: 44px;
+    font-size: 13px;
+  }
+
+  /* Pin rows — bigger touch targets */
+  .pin-row { padding: 13px 12px; }
+  .pin-clear { padding: 8px; min-width: 32px; min-height: 32px; display:flex; align-items:center; justify-content:center; }
+
+  /* Fare buttons */
+  .btn { min-height: 44px; }
+
+  /* ── MATRIX TABLE: horizontal scroll ── */
+  .matrix-content {
+    padding: 16px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .matrix-table {
+    font-size: 13px;
+    min-width: 420px;
+  }
+  .matrix-table th,
+  .matrix-table td {
+    padding: 11px 14px;
+  }
+  .matrix-note { font-size: 12.5px; }
+
+  /* ── LOGS ── */
+  .logs-toolbar { padding: 12px 16px 0; }
+  .logs-content { padding: 12px 16px 16px; }
+  .log-card { padding: 12px 13px; gap: 10px; }
+
+  /* ── REPORT ── */
+  .report-content { padding: 16px; max-width: 100%; }
+  .report-preview { padding: 18px; }
+  .rp-key { width: 110px; font-size: 11.5px; }
+  .rp-val { font-size: 12.5px; }
+  .rp-field { gap: 8px; }
+
+  /* Report action buttons: full-width stack */
+  #report-actions { flex-direction: column; }
+  #report-actions .btn { width: 100%; justify-content: center; }
+
+  /* ── ABOUT ── */
+  .about-content { padding: 16px; max-width: 100%; }
+  .about-hero { padding: 22px 20px; }
+  .about-hero-title { font-size: 22px; }
+  .about-card { padding: 16px; }
+
+  /* ── TOAST: clear of bottom sheet ── */
+  .toast-wrap {
+    bottom: 280px;
+    right: 14px;
+    left: 14px;
+    align-items: center;
+  }
+  .toast { text-align: center; width: 100%; }
+
+  /* Map ctrl-title size tweak */
+  .map-ctrl-title { font-size: 15px; }
+  .map-ctrl-sub { font-size: 11px; }
+
+  /* Fare result compact */
+  .fare-result-body { padding: 12px 14px; gap: 8px; }
+  .fare-result-head { padding: 10px 14px; font-size: 12px; }
+  .fare-row-label { font-size: 12px; }
+  .fare-row-value { font-size: 13.5px; }
+}
+
+/* Very small phones */
+@media(max-width:380px) {
+  .panel-header { padding-left: 54px; }
+  .sidebar { width: 85vw; }
+  .about-hero-title { font-size: 19px; }
+  .matrix-table { min-width: 360px; }
+  .toast-wrap { bottom: 270px; }
+}
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width:6px; }
+  ::-webkit-scrollbar-track { background:transparent; }
+  ::-webkit-scrollbar-thumb { background:var(--border); border-radius:99px; }
+  ::-webkit-scrollbar-thumb:hover { background:var(--text3); }
+
+  /* ── MAP CUSTOM ── */
+  .leaflet-popup-content-wrapper {
+    border-radius:10px !important;
+    box-shadow:var(--shadow-lg) !important;
+    font-family:'DM Sans', sans-serif !important;
+  }
+  .leaflet-popup-content { font-size:13px !important; }
+  .custom-pin {
+    display:flex; flex-direction:column; align-items:center;
+  }
+  .custom-pin-dot {
+    width:20px; height:20px;
+    border-radius:50%;
+    border:3px solid #fff;
+    box-shadow:0 2px 8px rgba(0,0,0,0.25);
+  }
+  .custom-pin-line {
+    width:2px; height:14px;
+    background:rgba(0,0,0,0.2);
+  }
+  .leaflet-routing-container { display:none !important; }
+
+  /* ── ROUTE LINE ANIM ── */
+  @keyframes dash { to { stroke-dashoffset:0; } }
+
+  /* ── SECTION DIVIDER ── */
+  .section-divider {
+    height:1px; background:var(--border);
+    margin:4px 0;
+  }
+
+  .loading-line {
+    height:3px;
+    background:linear-gradient(90deg, transparent, var(--accent), transparent);
+    background-size:200%;
+    animation: shimmer 1.5s infinite;
+    border-radius:99px;
+    margin-bottom:6px;
+    display:none;
+  }
+  .loading-line.active { display:block; }
+  @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+  .map-mode-btns {
+    display:flex; gap:6px; margin-bottom:10px;
+  }
+  .map-mode-btn {
+    flex:1; padding:12px;
+    border-radius:8px;
+    font-size:14px; font-weight:600;
+    border:1.5px solid var(--border);
+    background:var(--surface);
+    cursor:pointer; transition:all 0.15s;
+    color:var(--text2);
+  }
+  .map-mode-btn.active-mode {
+    background:var(--accent-dim);
+    border-color:var(--accent);
+    color:var(--accent);
+  }
+
+  .report-list { display:flex; flex-direction:column; gap:12px; margin-top:16px; }
+  .report-card {
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-left:4px solid var(--red);
+    border-radius:var(--radius-sm);
+    padding:14px 16px;
+    animation:fadeUp 0.25s ease;
+  }
+  .report-card-head { display:flex; align-items:center; justify-content:space-between; }
+  .report-card-plate {
+    font-family:'Syne', sans-serif; font-size:15px; font-weight:800;
+    color:var(--red); letter-spacing:1px;
+  }
+  .report-card-date { font-size:11px; color:var(--text3); }
+  .report-card-reason { font-size:12.5px; color:var(--text2); margin-top:6px; line-height:1.5; }
+.overlay {
+  display: none;
+}
+
+.overlay.active {
+  display: block;
+}
+</style>
+</head>
+<body>
+<button class="menu-toggle" onclick="toggleSidebar()" title="Menu">☰</button>
+<div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">Sakay<span>Tayo</span></div>
+      <div class="logo-sub">Manolo Fortich • Habal-Habal</div>
+    </div>
+    <nav class="nav-links">
+      <button class="nav-link active" onclick="showPanel('map')" id="nav-map">
+        <span class="nav-icon">🗺️</span> Fare Calculator
+      </button>
+      <button class="nav-link" onclick="showPanel('matrix')" id="nav-matrix">
+        <span class="nav-icon">📋</span> Fare Matrix
+      </button>
+      <div class="section-divider"></div>
+      <button class="nav-link" onclick="showPanel('logs')" id="nav-logs">
+        <span class="nav-icon">🕐</span> History
+        <span class="nav-badge" id="log-badge" style="display:none">0</span>
+      </button>
+      <button class="nav-link" onclick="showPanel('report')" id="nav-report">
+        <span class="nav-icon">⚠️</span> Report Driver
+      </button>
+      <div class="section-divider"></div>
+      <button class="nav-link" onclick="showPanel('about')" id="nav-about">
+        <span class="nav-icon">ℹ️</span> About
+      </button>
+    </nav>
+    <div class="nav-footer">
+      Based on Joint Resolution No.1 s. 2026<br>
+      Sangguniang Bayan–Habal-Habal Associations–MFRTA-CADO<br>
+      <span style="color:var(--accent);font-weight:600">Manolo Fortich, Bukidnon</span>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- ── MAP PANEL ── -->
+    <div class="panel active" id="panel-map">
+      <div class="map-wrapper">
+        <div id="map"></div>
+
+        <!-- Mobile floating fare result -->
+        <div id="mobile-fare-float">
+          <div class="mff-rows">
+            <div class="mff-row">
+              <span class="mff-label">📏 Distance</span>
+              <strong class="mff-val" id="mff-dist">—</strong>
+            </div>
+            <div class="mff-divider"></div>
+            <div class="mff-row">
+              <span class="mff-label">Regular Fare</span>
+              <strong class="mff-val accent" id="mff-reg">—</strong>
+            </div>
+            <div class="mff-row">
+              <span class="mff-label">Discounted <small>(PWD · SP · Senior)</small></span>
+              <strong class="mff-val green" id="mff-disc">—</strong>
+            </div>
+          </div>
+          <button class="mff-close" onclick="clearAll()" title="Reset">✕</button>
+        </div>
+
+      </div>
+      <div class="map-sidebar">
+        <div class="map-ctrl-head">
+          <div class="map-ctrl-title">📍 Set Route</div>
+          <div class="map-ctrl-sub">Tap on map to drop a pin</div>
+          <div class="loading-line" id="loading-line"></div>
+        </div>
+        <div class="map-ctrl-body">
+          <!-- Mode -->
+          <div class="map-mode-btns">
+            <button class="map-mode-btn active-mode" id="mode-pickup" onclick="setMode('pickup')">🟢 Pickup</button>
+            <button class="map-mode-btn" id="mode-dropoff" onclick="setMode('dropoff')">🔴 Drop-off</button>
+          </div>
+
+          <!-- Pickup -->
+          <div class="pin-row" id="pickup-row" onclick="setMode('pickup')">
+            <div class="pin-dot pickup">🟢</div>
+            <div class="pin-info">
+              <div class="pin-label">Pickup Point</div>
+              <div class="pin-addr" id="pickup-addr">Tap map to set</div>
+            </div>
+            <button class="pin-clear" onclick="clearPin('pickup');event.stopPropagation()" title="Clear">✕</button>
+          </div>
+
+          <!-- Dropoff -->
+          <div class="pin-row" id="dropoff-row" onclick="setMode('dropoff')">
+            <div class="pin-dot dropoff">🔴</div>
+            <div class="pin-info">
+              <div class="pin-label">Drop-off Point</div>
+              <div class="pin-addr" id="dropoff-addr">Tap map to set</div>
+            </div>
+            <button class="pin-clear" onclick="clearPin('dropoff');event.stopPropagation()" title="Clear">✕</button>
+          </div>
+
+          <!-- Instructions -->
+          <div class="map-instruction" id="map-instruction">
+            Tap anywhere on the map to set your <strong>pickup</strong> point
+          </div>
+
+          <!-- Fare Result -->
+          <div class="fare-result" id="fare-result" style="display:none">
+            <div class="fare-result-head">🧾 Estimated Fare</div>
+            <div class="fare-result-body">
+              <div class="fare-row">
+                <span class="fare-row-label">📏 Distance</span>
+                <span class="fare-row-value distance" id="res-distance">—</span>
+              </div>
+              <div class="fare-divider"></div>
+              <div class="fare-row">
+                <span class="fare-row-label">Regular Fare</span>
+                <span class="fare-row-value regular" id="res-regular">—</span>
+              </div>
+              <div class="fare-row">
+                <span class="fare-row-label">Discounted Fare<br><small style="font-weight:400;color:var(--text3)">PWD · SP · Senior</small></span>
+                <span class="fare-row-value discount" id="res-discount">—</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Buttons -->
+          <div id="fare-actions" style="display:none; flex-direction:column; gap:8px;">
+            <button class="btn btn-primary btn-sm" onclick="saveLog()" id="save-btn" style="display:none">
+              💾 Save to History
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="clearAll()">
+              🔄 Reset Route
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── FARE MATRIX ── -->
+    <div class="panel" id="panel-matrix">
+      <div class="panel-header">
+        <div class="panel-title">📋 Habal-Habal Fare Matrix</div>
+        <div class="panel-sub">Joint Resolution No.1 s. 2026 — Manolo Fortich, Bukidnon</div>
+      </div>
+      <div class="matrix-content">
+        <table class="matrix-table">
+          <thead>
+            <tr>
+              <th>Distance (km)</th>
+              <th>Regular Fare / Head</th>
+              <th>Discounted Fare (PWD, SP, Senior Citizen)</th>
+            </tr>
+          </thead>
+          <tbody id="matrix-tbody"></tbody>
+        </table>
+        <div class="matrix-note">
+          <strong>⚠️ Note:</strong> Discounted fare is 20% off the regular fare, applicable to Persons with Disability (PWD), Solo Parents (SP), and Senior Citizens. 
+          Always carry your valid ID when availing the discount. Fares for distances beyond 10 km are computed proportionally.
+        </div>
+        <div class="matrix-note" style="margin-top:12px; background:var(--red-dim); border-color:var(--red);">
+          <strong style="color:var(--red);">📢 Your Rights:</strong> If a driver demands a fare higher than this official matrix, you have the right to refuse and report them. Use the <em>Report Driver</em> section in this app.
+          Contact: <strong><a href="mailto:mfrta@manolofortich.gov.ph" style="color:var(--red)">mfrta@manolofortich.gov.ph</a></strong> · <strong>0917-159-5855</strong>
+        </div>
+      </div>
+    </div>
+    <!-- ── LOGS ── -->
+    <div class="panel" id="panel-logs">
+      <div class="panel-header">
+        <div class="panel-title">🕐 Calculation History</div>
+        <div class="panel-sub">Records of your recent fare calculations</div>
+      </div>
+      <div class="logs-toolbar" style="padding-top:16px">
+        <span class="logs-count" id="logs-count">0 records</span>
+        <button class="btn btn-danger btn-sm" onclick="clearLogs()">🗑 Clear All</button>
+      </div>
+      <div class="logs-content" id="logs-list">
+        <div class="log-empty">
+          <div class="log-empty-icon">🛵</div>
+          No calculations yet.<br>Use the map to calculate a fare!
+        </div>
+      </div>
+    </div>
+
+    <!-- ── REPORT ── -->
+    <div class="panel" id="panel-report">
+      <div class="panel-header">
+        <div class="panel-title">⚠️ Report a Driver</div>
+        <div class="panel-sub">File a complaint against overcharging habal-habal drivers</div>
+      </div>
+      <div class="report-content">
+        <div style="background:var(--red-dim);border:1px solid rgba(192,57,43,0.25);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:20px;font-size:13.5px;color:var(--red);line-height:1.6;">
+          🛑 <strong>Only use this form</strong> to report valid violations of the official fare matrix. False reports are a disservice to honest drivers.
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Driver's Plate Number *</label>
+          <input class="form-input" id="rpt-plate" placeholder="e.g. MF-1234" style="text-transform:uppercase;letter-spacing:2px;font-weight:700;font-size:15px">
+          <div class="form-hint">Enter the motorcycle plate number as displayed on the vehicle.</div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Date & Time of Incident *</label>
+          <input class="form-input" type="datetime-local" id="rpt-datetime">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Route (From → To) *</label>
+          <input class="form-input" id="rpt-route" placeholder="e.g. Manolo Fortich Poblacion → Dahilayan">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Fare Demanded (₱) *</label>
+          <input class="form-input" type="number" id="rpt-fare" placeholder="e.g. 150">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Type of Violation *</label>
+          <select class="form-select" id="rpt-type">
+            <option value="">— Select violation type —</option>
+            <option value="overcharging">Overcharging / Demanding higher fare than matrix</option>
+            <option value="refuse-discount">Refusing to honor PWD / Senior / SP discount</option>
+            <option value="rude-conduct">Rude or threatening conduct</option>
+            <option value="unsafe-driving">Unsafe or reckless driving</option>
+            <option value="other">Other violation</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Detailed Description *</label>
+          <textarea class="form-textarea" id="rpt-desc" placeholder="Describe what happened in detail. Include any verbal exchanges, demands, or threatening behavior."></textarea>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Your Name (optional)</label>
+          <input class="form-input" id="rpt-name" placeholder="Anonymous by default">
+          <div class="form-hint">Your identity will be kept confidential.</div>
+        </div>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="generateReport()" style="flex:1">📄 Generate Report Slip</button>
+          <button class="btn btn-secondary" onclick="clearReport()">Reset</button>
+        </div>
+
+        <!-- Preview -->
+        <div class="report-preview" id="report-preview">
+          <div class="rp-header">
+            <div class="rp-badge">Citizen Complaint Report</div>
+            <div class="rp-title">Habal-Habal Driver Complaint</div>
+            <div class="rp-sub">Manolo Fortich, Bukidnon • MFRTA-CADO</div>
+          </div>
+          <div id="rp-fields"></div>
+          <div class="rp-footer">
+            Reference No: <span class="rp-ref" id="rp-ref">—</span><br>
+            Generated via SakayTayo Fare Calculator · manolofortich.gov.ph<br>
+           Submit to: <a href="mailto:mfrta@manolofortich.gov.ph">mfrta@manolofortich.gov.ph</a> or call 0917-159-5855<br>
+            <em>This document serves as a prima facie record of your complaint.</em>
+          </div>
+        </div>
+
+        <div id="report-actions" style="display:none; margin-top:12px; flex-wrap:wrap; gap:8px;">
+          <button class="btn btn-primary btn-sm" onclick="printReport()">🖨️ Print / Save as Image</button>
+          <button class="btn btn-secondary btn-sm" onclick="saveReportLog()">💾 Save to Records</button>
+        </div>
+
+        <!-- Saved Reports -->
+        <div id="saved-reports-section" style="margin-top:28px; display:none;">
+          <div class="about-section-title">📁 Saved Reports</div>
+          <div class="report-list" id="saved-reports-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ABOUT ── -->
+    <div class="panel" id="panel-about">
+      <div class="panel-header">
+        <div class="panel-title">ℹ️ About SakayTayo</div>
+        <div class="panel-sub">The story behind this tool</div>
+      </div>
+      <div class="about-content">
+        <div class="about-hero">
+          <div class="about-hero-tag">🛵 For the Riders of Manolo Fortich</div>
+          <div class="about-hero-title">Know Your Fare.<br>Know Your Rights.</div>
+          <div class="about-hero-sub">A free, no-account tool to protect passengers and support honest habal-habal drivers in Manolo Fortich, Bukidnon.</div>
+        </div>
+ 
+        <div class="about-section">
+          <div class="about-section-title">🌱 Why this was made</div>
+          <p>With the implementation of the new Habal-Habal Flexible Fare Matrix under Joint Resolution No.1 s. 2026, many passengers — especially the elderly and those unfamiliar with technology — are unaware of the official fares. This leads to confusion, and sometimes overcharging.</p>
+          <p>SakayTayo was built to put the official fare matrix in everyone's pocket, with an easy map-based calculator so anyone can know exactly how much their ride should cost before they even mount the motorcycle.</p>
+          <p>No accounts. No ads. No tracking. Just a fair ride.</p>
+        </div>
+ 
+        <div class="about-section">
+          <div class="about-section-title">👤 Built by</div>
+          <div class="about-card">
+            <div class="about-avatar">🎓</div>
+            <div>
+              <div class="about-name">Auggie Manginsay</div>
+              <div class="about-role">
+                ICS Student, 2023–present<br>
+                <strong>Northern Bukidnon State College</strong><br>
+                Manolo Fortich, Bukidnon
+              </div>
+            </div>
+          </div>
+        </div>
+ 
+        <div class="about-section">
+          <div class="about-section-title">📜 Legal Basis</div>
+          <div class="fare-ref-box">
+            <strong>Joint Resolution No.1 s. 2026</strong><br>
+            Sangguniang Bayan – Habal-Habal Associations – MFRTA-CADO<br>
+            Municipality of Manolo Fortich, Province of Bukidnon<br><br>
+            Complaints: <strong><a href="mailto:mfrta@manolofortich.gov.ph" style="color:var(--gold)">mfrta@manolofortich.gov.ph</a></strong> · 0917-159-5855 · Lgu Mfrta (Facebook)
+          </div>
+        </div>
+ 
+        <div class="about-section">
+          <div class="about-section-title">⚙️ How it works</div>
+          <p>The map uses OpenStreetMap data. When you drop a pickup and drop-off pin, the app measures the straight-line (aerial) distance between both points and references the official fare table to compute your fare instantly.</p>
+          <p>All calculations are stored locally in your browser — nothing is sent to any server. The Report feature generates a printable slip you can use when filing a complaint with the LGU or MFRTA.</p>
+        </div>
+ 
+        <div class="about-section">
+          <div class="about-section-title">✉️ Contact the Developer</div>
+          <div class="about-card" style="background:var(--accent-dim); border-color:var(--accent); border-width:1.5px;">
+            <div class="about-avatar" style="background:var(--accent); font-size:20px;">💬</div>
+            <div>
+              <div class="about-name" style="font-size:15px;">Auggie John Fred Manginsay</div>
+              <div class="about-role" style="margin-top:6px; line-height:1.8;">
+                For feedback, bug reports, or collaboration:<br>
+                <a href="mailto:auggiejohnfred504@gmail.com" style="color:var(--accent); font-weight:600; font-size:13px; text-decoration:none; display:inline-flex; align-items:center; gap:4px; margin-top:4px;">
+                  📧 auggiejohnfred504@gmail.com
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+ 
+        <div class="about-section">
+          <div class="about-section-title" style="color:var(--text3)">Version</div>
+          <p style="font-size:12.5px; color:var(--text3);">SakayTayo v1.0 · Open source · Hosted on GitHub + Vercel</p>
+        </div>
+      </div>
+    </div>
+ 
+  </main>
+</div>
+
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ── FARE MATRIX DATA ──
+const FARE_MATRIX = [
+  { km:1,  regular:20,  discount:16 },
+  { km:2,  regular:25,  discount:20 },
+  { km:3,  regular:30,  discount:24 },
+  { km:4,  regular:40,  discount:32 },
+  { km:5,  regular:45,  discount:36 },
+  { km:6,  regular:50,  discount:40 },
+  { km:7,  regular:60,  discount:48 },
+  { km:8,  regular:65,  discount:52 },
+  { km:9,  regular:70,  discount:56 },
+  { km:10, regular:75,  discount:60 },
+];
+
+function getFare(km) {
+  if (km <= 0) return { regular:0, discount:0 };
+  if (km <= 10) {
+    const rounded = Math.ceil(km);
+    const entry = FARE_MATRIX.find(f => f.km === rounded) || FARE_MATRIX[FARE_MATRIX.length-1];
+    return { regular: entry.regular, discount: entry.discount };
+  }
+  // Beyond 10km: extrapolate
+  const base = FARE_MATRIX[FARE_MATRIX.length-1];
+  const extra = Math.ceil(km) - 10;
+  const perKmReg = (base.regular / 10) * 1.05;
+  const reg = Math.round(base.regular + extra * perKmReg);
+  const disc = Math.round(reg * 0.80);
+  return { regular: reg, discount: disc };
+}
+function useMyLocation() {
+  if (!navigator.geolocation) {
+    toast('⚠️ Geolocation not supported on this device.', 'error');
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(async pos => {
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+    map.setView([lat, lng], 15);
+    showLoading(true);
+    const addr = await reverseGeocode(lat, lng);
+    showLoading(false);
+    if (currentMode === 'pickup') {
+      if (pickupMarker) map.removeLayer(pickupMarker);
+      pickupMarker = L.marker([lat, lng], {icon: iconPickup})
+        .addTo(map)
+        .bindPopup(`<b>🟢 Pickup</b><br>${addr}`, {maxWidth:200});
+      document.getElementById('pickup-addr').textContent = addr;
+      if (!dropoffMarker) setMode('dropoff');
+    } else {
+      if (dropoffMarker) map.removeLayer(dropoffMarker);
+      dropoffMarker = L.marker([lat, lng], {icon: iconDropoff})
+        .addTo(map)
+        .bindPopup(`<b>📍 Drop-off</b><br>${addr}`, {maxWidth:200});
+      document.getElementById('dropoff-addr').textContent = addr;
+    }
+    if (pickupMarker && dropoffMarker) calculateFare();
+    updateInstruction();
+  }, () => {
+    toast('⚠️ Could not get your location. Please allow location access.', 'error');
+  });
+}
+
+// ── FILL MATRIX TABLE ──
+(function(){
+  const tb = document.getElementById('matrix-tbody');
+  FARE_MATRIX.forEach(f => {
+    tb.innerHTML += `<tr>
+      <td>${f.km} km</td>
+      <td><span class="fare-pill reg">₱${f.regular}.00</span></td>
+      <td><span class="fare-pill disc">₱${f.discount}.00</span></td>
+    </tr>`;
+  });
+})();
+
+// ── MAP SETUP ──
+const map = L.map('map', {
+  center: [8.3648, 124.8600],
+  zoom: 13,
+  zoomControl: true
+});
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  maxZoom: 19
+}).addTo(map);
+setTimeout(() => {
+  map.invalidateSize();
+}, 300);
+window.addEventListener('resize', () => {
+  map.invalidateSize();
+});
+// Custom icons
+function createIcon(color, emoji) {
+  return L.divIcon({
+    html: `<div style="
+      background:${color};
+      width:36px;height:36px;
+      border-radius:50% 50% 50% 4px;
+      border:3px solid #fff;
+      box-shadow:0 3px 12px rgba(0,0,0,0.3);
+      display:flex;align-items:center;justify-content:center;
+      font-size:16px;
+      transform:rotate(-45deg);
+    "><span style="transform:rotate(45deg)">${emoji}</span></div>`,
+    iconSize:[36,36], iconAnchor:[18,34], popupAnchor:[0,-36],
+    className:''
+  });
+}
+
+const iconPickup  = createIcon('#2a7a4a','🟢');
+const iconDropoff = createIcon('#e05c2a','📍');
+
+let pickupMarker  = null;
+let dropoffMarker = null;
+let routeLine     = null;
+let currentMode   = 'pickup';
+let lastLog       = null;
+
+function setMode(m) {
+  currentMode = m;
+  document.querySelectorAll('.map-mode-btn').forEach(b => b.classList.remove('active-mode'));
+  document.getElementById('mode-'+m).classList.add('active-mode');
+  document.querySelectorAll('.pin-row').forEach(r => r.classList.remove('active-pin'));
+  document.getElementById(m+'-row').classList.add('active-pin');
+  updateInstruction();
+}
+
+function updateInstruction() {
+  const el = document.getElementById('map-instruction');
+  if (!pickupMarker && !dropoffMarker) {
+    el.innerHTML = 'Tap anywhere on the map to set your <strong>pickup</strong> point';
+    el.style.display='block';
+  } else if (pickupMarker && !dropoffMarker) {
+    el.innerHTML = 'Now tap to set the <strong>drop-off</strong> point';
+    el.style.display='block';
+  } else if (!pickupMarker && dropoffMarker) {
+    el.innerHTML = 'Now tap to set the <strong>pickup</strong> point';
+    el.style.display='block';
+  } else {
+    el.style.display='none';
+  }
+}
+
+map.on('click', async function(e) {
+  const {lat, lng} = e.latlng;
+  showLoading(true);
+  const addr = await reverseGeocode(lat, lng);
+  showLoading(false);
+
+  if (currentMode === 'pickup') {
+    if (pickupMarker) map.removeLayer(pickupMarker);
+    pickupMarker = L.marker([lat,lng], {icon: iconPickup})
+      .addTo(map)
+      .bindPopup(`<b>🟢 Pickup</b><br>${addr}`, {maxWidth:200});
+    document.getElementById('pickup-addr').textContent = addr;
+    if (!dropoffMarker) setMode('dropoff');
+  } else {
+    if (dropoffMarker) map.removeLayer(dropoffMarker);
+    dropoffMarker = L.marker([lat,lng], {icon: iconDropoff})
+      .addTo(map)
+      .bindPopup(`<b>📍 Drop-off</b><br>${addr}`, {maxWidth:200});
+    document.getElementById('dropoff-addr').textContent = addr;
+  }
+
+  if (pickupMarker && dropoffMarker) {
+    calculateFare();
+  }
+
+  updateInstruction();
+});
+
+async function reverseGeocode(lat, lng) {
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`, {
+      headers: {'Accept-Language':'en'}
+    });
+    const d = await res.json();
+    const addr = d.address;
+    const parts = [addr.road||addr.suburb||'', addr.city||addr.town||addr.village||addr.municipality||'', addr.province||addr.state||''].filter(Boolean);
+    return parts.slice(0,3).join(', ') || d.display_name?.split(',').slice(0,2).join(', ') || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+  } catch {
+    return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+  }
+}
+
+function haversine(lat1,lon1,lat2,lon2) {
+  const R=6371;
+  const dLat=(lat2-lat1)*Math.PI/180;
+  const dLon=(lon2-lon1)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+function calculateFare() {
+  const p = pickupMarker.getLatLng();
+  const d = dropoffMarker.getLatLng();
+  const km = haversine(p.lat,p.lng,d.lat,d.lng);
+  const fare = getFare(km);
+
+  // Draw route line
+  if (routeLine) map.removeLayer(routeLine);
+  routeLine = L.polyline([[p.lat,p.lng],[d.lat,d.lng]], {
+    color:'#e05c2a', weight:4, opacity:0.8,
+    dashArray:'10,6'
+  }).addTo(map);
+  map.fitBounds([[p.lat,p.lng],[d.lat,d.lng]], {padding:[40,40]});
+
+  // Show result
+  document.getElementById('res-distance').textContent = km.toFixed(2)+' km';
+  document.getElementById('res-regular').textContent  = '₱'+fare.regular+'.00';
+  document.getElementById('res-discount').textContent = '₱'+fare.discount+'.00';
+  document.getElementById('fare-result').style.display='block';
+  document.getElementById('fare-actions').style.display='flex';
+  document.getElementById('save-btn').style.display='flex';
+
+  // On mobile, show the floating fare card above the bottom sheet
+  if (window.innerWidth <= 768) {
+    document.getElementById('mff-dist').textContent = km.toFixed(2) + ' km';
+    document.getElementById('mff-reg').textContent  = '₱' + fare.regular + '.00';
+    document.getElementById('mff-disc').textContent = '₱' + fare.discount + '.00';
+    document.getElementById('mobile-fare-float').classList.add('visible');
+  }
+
+  lastLog = {
+    pickup: document.getElementById('pickup-addr').textContent,
+    dropoff: document.getElementById('dropoff-addr').textContent,
+    km: km.toFixed(2),
+    regular: fare.regular,
+    discount: fare.discount,
+    time: new Date().toLocaleString('en-PH',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'})
+  };
+
+  toast('✅ Fare calculated!','success');
+}
+
+function clearPin(type) {
+  if (type==='pickup' && pickupMarker) {
+    map.removeLayer(pickupMarker); pickupMarker=null;
+    document.getElementById('pickup-addr').textContent='Tap map to set';
+  }
+  if (type==='dropoff' && dropoffMarker) {
+    map.removeLayer(dropoffMarker); dropoffMarker=null;
+    document.getElementById('dropoff-addr').textContent='Tap map to set';
+  }
+  if (routeLine) { map.removeLayer(routeLine); routeLine=null; }
+  document.getElementById('fare-result').style.display='none';
+  document.getElementById('fare-actions').style.display='none';
+  document.getElementById('save-btn').style.display='none';
+  lastLog=null;
+  updateInstruction();
+}
+
+function clearAll() {
+  clearPin('pickup'); clearPin('dropoff');
+  setMode('pickup');
+  document.getElementById('pickup-row').classList.remove('active-pin');
+  document.getElementById('dropoff-row').classList.remove('active-pin');
+  // Hide mobile floating fare card
+  document.getElementById('mobile-fare-float').classList.remove('visible');
+  if (window.innerWidth <= 768) {
+    const sheet = document.querySelector('.map-sidebar');
+    if (sheet) sheet.style.height = '260px';
+  }
+}
+
+function showLoading(b) {
+  document.getElementById('loading-line').classList.toggle('active',b);
+}
+
+// ── LOGS ──
+let logs = JSON.parse(localStorage.getItem('sktLogs')||'[]');
+
+function renderLogs() {
+  const el = document.getElementById('logs-list');
+  const cnt = document.getElementById('logs-count');
+  const badge = document.getElementById('log-badge');
+  cnt.textContent = logs.length+' record'+(logs.length!==1?'s':'');
+  badge.textContent = logs.length;
+  badge.style.display = logs.length?'inline':'none';
+  if(!logs.length){
+    el.innerHTML='<div class="log-empty"><div class="log-empty-icon">🛵</div>No calculations yet.<br>Use the map to calculate a fare!</div>';
+    return;
+  }
+  el.innerHTML = '';
+  [...logs].reverse().forEach((l,i)=>{
+    const n = logs.length-i;
+    const div = document.createElement('div');
+    div.className='log-card';
+    div.innerHTML=`
+      <div class="log-num">${n}</div>
+      <div class="log-body">
+        <div class="log-route">📍 ${l.pickup}<br>→ ${l.dropoff}</div>
+        <div class="log-meta">
+          <span class="log-chip dist">📏 ${l.km} km</span>
+          <span class="log-chip fare">₱${l.regular}</span>
+          <span class="log-chip disc">PWD ₱${l.discount}</span>
+          <span class="log-chip time">🕐 ${l.time}</span>
+        </div>
+      </div>
+      <button class="log-del" onclick="deleteLog(${logs.length-1-i})" title="Delete">🗑</button>
+    `;
+    el.appendChild(div);
+  });
+}
+
+function saveLog() {
+  if(!lastLog) return;
+  logs.push({...lastLog});
+  localStorage.setItem('sktLogs', JSON.stringify(logs));
+  renderLogs();
+  toast('💾 Saved to history!','success');
+  document.getElementById('save-btn').style.display='none';
+}
+
+function deleteLog(i) {
+  logs.splice(i,1);
+  localStorage.setItem('sktLogs', JSON.stringify(logs));
+  renderLogs();
+}
+
+function clearLogs() {
+  if(!logs.length) return;
+  if(confirm('Clear all calculation history?')) {
+    logs=[];
+    localStorage.setItem('sktLogs','[]');
+    renderLogs();
+    toast('🗑 History cleared','info');
+  }
+}
+
+renderLogs();
+
+// ── REPORT ──
+let savedReports = JSON.parse(localStorage.getItem('sktReports')||'[]');
+
+function generateReport() {
+  const plate = document.getElementById('rpt-plate').value.trim().toUpperCase();
+  const dt    = document.getElementById('rpt-datetime').value;
+  const route = document.getElementById('rpt-route').value.trim();
+  const fare  = document.getElementById('rpt-fare').value;
+  const type  = document.getElementById('rpt-type').value;
+  const desc  = document.getElementById('rpt-desc').value.trim();
+  const name  = document.getElementById('rpt-name').value.trim() || 'Anonymous';
+
+  if(!plate||!dt||!route||!fare||!type||!desc) {
+    toast('⚠️ Please fill all required fields.','error'); return;
+  }
+
+  const ref = 'RPT-'+Date.now().toString(36).toUpperCase();
+  document.getElementById('rp-ref').textContent = ref;
+
+  const typeLabels = {
+    'overcharging': 'Overcharging / Demanding higher fare than official matrix',
+    'refuse-discount': 'Refusing to honor PWD / Senior Citizen / Solo Parent discount',
+    'rude-conduct': 'Rude or threatening conduct',
+    'unsafe-driving': 'Unsafe or reckless driving',
+    'other': 'Other violation'
+  };
+
+  const fields = [
+    ['Reference No.',       ref],
+    ['Date Filed',          new Date().toLocaleString('en-PH')],
+    ['Driver Plate No.',    plate],
+    ['Incident Date/Time',  new Date(dt).toLocaleString('en-PH')],
+    ['Route',               route],
+    ['Fare Demanded',       '₱'+parseFloat(fare).toFixed(2)],
+    ['Type of Violation',   typeLabels[type]||type],
+    ['Description',         desc],
+    ['Complainant',         name],
+  ];
+
+  const rpf = document.getElementById('rp-fields');
+  rpf.innerHTML = fields.map(([k,v])=>`
+    <div class="rp-field">
+      <div class="rp-key">${k}</div>
+      <div class="rp-val">${v}</div>
+    </div>
+  `).join('');
+
+  const prev = document.getElementById('report-preview');
+  prev.classList.add('visible');
+  document.getElementById('report-actions').style.display='flex';
+
+  // Store temp for saving
+  window._currentReport = { plate, dt, route, fare, type:typeLabels[type]||type, desc, name, ref, filed: new Date().toLocaleString('en-PH') };
+  toast('📄 Report generated!','success');
+  prev.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function saveReportLog() {
+  if(!window._currentReport) return;
+  savedReports.push(window._currentReport);
+  localStorage.setItem('sktReports', JSON.stringify(savedReports));
+  renderSavedReports();
+  toast('💾 Report saved!','success');
+}
+
+function renderSavedReports() {
+  const sec = document.getElementById('saved-reports-section');
+  const list = document.getElementById('saved-reports-list');
+  if(!savedReports.length) { sec.style.display='none'; return; }
+  sec.style.display='block';
+  list.innerHTML = [...savedReports].reverse().map((r,i)=>`
+    <div class="report-card">
+      <div class="report-card-head">
+        <div class="report-card-plate">🏍 ${r.plate}</div>
+        <div class="report-card-date">${r.filed}</div>
+      </div>
+      <div class="report-card-reason">
+        <strong>${r.type}</strong><br>Route: ${r.route}<br>Ref: ${r.ref}
+      </div>
+    </div>
+  `).join('');
+}
+
+function clearReport() {
+  ['rpt-plate','rpt-datetime','rpt-route','rpt-fare','rpt-desc','rpt-name'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('rpt-type').value='';
+  document.getElementById('report-preview').classList.remove('visible');
+  document.getElementById('report-actions').style.display='none';
+  window._currentReport=null;
+}
+
+function printReport() {
+  const preview = document.getElementById('report-preview');
+  const win = window.open('','','width=700,height=900');
+  win.document.write(`
+    <html><head><title>Habal-Habal Complaint Report</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+    <style>
+      body{font-family:'DM Sans',sans-serif;padding:40px;color:#1a1814;max-width:640px;margin:0 auto;}
+      .rp-header{text-align:center;border-bottom:2px solid #e0dbd0;padding-bottom:20px;margin-bottom:20px;}
+      .rp-badge{display:inline-block;background:#fde8de;color:#c0392b;font-size:11px;font-weight:700;padding:4px 14px;border-radius:99px;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;border:1px solid rgba(192,57,43,0.25);}
+      .rp-title{font-family:'Syne',sans-serif;font-size:22px;font-weight:800;}
+      .rp-sub{font-size:12px;color:#9b968f;margin-top:4px;}
+      .rp-field{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid #f0ede6;}
+      .rp-key{width:160px;font-weight:600;color:#6b6560;font-size:12px;flex-shrink:0;}
+      .rp-val{font-size:13px;}
+      .rp-footer{text-align:center;margin-top:20px;font-size:11px;color:#9b968f;border-top:1px solid #e0dbd0;padding-top:16px;}
+      .rp-ref{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;color:#e05c2a;}
+    </style></head><body>
+    ${preview.innerHTML}
+    </body></html>
+  `);
+  win.document.close();
+  win.focus();
+  setTimeout(()=>win.print(),400);
+}
+
+renderSavedReports();
+
+// ── PANEL NAVIGATION ──
+function showPanel(panel){
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + panel).classList.add('active');
+
+  document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
+  document.getElementById('nav-' + panel).classList.add('active');
+
+  // 🔥 FORCE CLOSE SIDEBAR ON MOBILE
+  if (window.innerWidth <= 768) {
+    closeSidebar();
+  }
+}
+// ── SIDEBAR TOGGLE ──
+function toggleSidebar() {
+  const s = document.getElementById('sidebar');
+  const o = document.getElementById('overlay');
+  s.classList.toggle('active');
+  o.classList.toggle('active');
+
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('active');
+  document.getElementById('overlay').classList.remove('active');
+
+}
+
+// ── TOAST ──
+function toast(msg, type='info') {
+  const wrap = document.getElementById('toast-wrap');
+  const t = document.createElement('div');
+  t.className='toast '+type;
+  t.textContent=msg;
+  wrap.appendChild(t);
+  setTimeout(()=>t.remove(),3100);
+}
+
+// ── INIT ──
+setMode('pickup');
+map.setView([8.3648, 124.8600], 13);
+
+L.circle([8.3648, 124.8600], {
+  color:'#e05c2a', fillColor:'#e05c2a', fillOpacity:0.04,
+  weight:1.5, dashArray:'6,4'
+}).addTo(map).bindPopup('<b>Manolo Fortich, Bukidnon</b><br>Tap anywhere to start');
+
+const dtEl = document.getElementById('rpt-datetime');
+const now = new Date();
+dtEl.value = now.toISOString().slice(0,16);
+
+// Force map to render correctly after layout settles
+setTimeout(() => map.invalidateSize(), 300);
+
+// MOBILE DRAG PANEL FIX
+(function () {
+  const panel = document.querySelector('.map-sidebar');
+  if (!panel) return;
+
+  let startY = 0;
+  let startHeight = 0;
+  let dragging = false;
+  const head = panel.querySelector('.map-ctrl-head');
+
+  panel.addEventListener('touchstart', (e) => {
+    // Only allow dragging from the header area
+    dragging = head && head.contains(e.target);
+    startY = e.touches[0].clientY;
+    startHeight = panel.offsetHeight;
+  });
+
+  panel.addEventListener('touchmove', (e) => {
+    if (!dragging) return;
+    e.preventDefault();
+    const delta = startY - e.touches[0].clientY;
+    let newHeight = startHeight + delta;
+    const max = window.innerHeight * 0.82;
+    const min = 160;
+    newHeight = Math.max(min, Math.min(max, newHeight));
+    panel.style.height = newHeight + 'px';
+  }, { passive: false });
+
+  panel.addEventListener('touchend', () => {
+    dragging = false;
+  });
+})();
+
+</script>
+</body>
+</html>
